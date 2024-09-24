@@ -27,7 +27,7 @@ def convert_pdf_to_png(pdf_content):
     
     return image_files
 
-# Endpoint para recibir la URL del PDF y convertirlo
+# Endpoint para recibir la URL del PDF y devolver un PNG
 @app.route('/convert', methods=['POST'])
 def convert_pdf():
     data = request.get_json()
@@ -43,16 +43,8 @@ def convert_pdf():
         # Convertir el PDF a PNG
         png_images = convert_pdf_to_png(pdf_content)
 
-        # Preparar las imágenes para ser enviadas
-        response_files = []
-        for idx, img_io in enumerate(png_images):
-            response_files.append({
-                "filename": f"page_{idx+1}.png",
-                "file": img_io
-            })
-        
-        # Si prefieres enviar una imagen como prueba, puedes hacer un send_file:
-        return send_file(response_files[0]['file'], mimetype='image/png', as_attachment=True, download_name=response_files[0]['filename'])
+        # Devolver la primera página del PDF como PNG (puedes cambiarlo si quieres más páginas)
+        return send_file(png_images[0], mimetype='image/png', as_attachment=True, download_name='page_1.png')
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
