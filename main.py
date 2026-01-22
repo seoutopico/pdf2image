@@ -140,6 +140,84 @@ def delete_pdf(pdf_id: str):
     raise HTTPException(404, "PDF no encontrado")
 
 
+@app.get("/text/{pdf_id}/{page_number}")
+def get_page_text(pdf_id: str, page_number: int):
+    """
+    Extrae TEXTO de una pagina del PDF.
+    Mucho mas rapido que imagen para enviar a GPT.
+    """
+    if pdf_id not in pdf_storage:
+        raise HTTPException(404, "PDF no encontrado")
+
+    stored = pdf_storage[pdf_id]
+
+    if page_number < 0 or page_number >= stored["total_pages"]:
+        raise HTTPException(400, f"Pagina invalida")
+
+    try:
+        doc = fitz.open(stream=stored["bytes"], filetype="pdf")
+        page = doc[page_number]
+
+        # Extraer texto con layout preservado
+        text = page.get_text("text")
+
+        # Extraer bloques de texto con posiciones (mejor estructura)
+        blocks = page.get_text("dict")["blocks"]
+        structured_text = []
+        for block in blocks:
+            if "lines" in block:
+                for line in block["lines"]:
+                    line_text = " ".join([span["text"] for span in line["spans"]])
+                    if line_text.strip():
+                        structured_text.append(line_text)
+
+        doc.close()
+        stored["timestamp"] = time.time()
+
+        return {
+            "page": page_number,
+            "total_pages": stored["total_pages"],
+            "text": text,
+            "lines": structured_text
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Error extrayendo texto: {str(e)}")
+
+
+@app.get("/text-all/{pdf_id}")
+def get_all_text(pdf_id: str):
+    """
+    Extrae TODO el texto del PDF de una vez.
+    Ideal para PDFs pequenos/medianos.
+    """
+    if pdf_id not in pdf_storage:
+        raise HTTPException(404, "PDF no encontrado")
+
+    stored = pdf_storage[pdf_id]
+
+    try:
+        doc = fitz.open(stream=stored["bytes"], filetype="pdf")
+        pages_text = []
+
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            text = page.get_text("text")
+            pages_text.append({
+                "page": page_num,
+                "text": text
+            })
+
+        doc.close()
+        stored["timestamp"] = time.time()
+
+        return {
+            "total_pages": stored["total_pages"],
+            "pages": pages_text
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Error extrayendo texto: {str(e)}")
+
+
 # Mantener endpoint original para compatibilidad (PDFs pequenios)
 @app.post("/pdf-to-images")
 async def pdf_to_images(
