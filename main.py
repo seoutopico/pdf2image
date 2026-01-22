@@ -106,13 +106,12 @@ def get_page(pdf_id: str, page_number: int, dpi: int = 150, format: str = "jpeg"
         zoom = dpi / 72
         matrix = fitz.Matrix(zoom, zoom)
 
+        pix = page.get_pixmap(matrix=matrix, alpha=False)
         if format == "png":
-            pix = page.get_pixmap(matrix=matrix, alpha=False)
             img_bytes = pix.tobytes("png")
             mime = "image/png"
         else:
-            pix = page.get_pixmap(matrix=matrix)
-            img_bytes = pix.tobytes("jpeg", quality=80)
+            img_bytes = pix.tobytes("jpeg")
             mime = "image/jpeg"
 
         b64 = base64.b64encode(img_bytes).decode('utf-8')
@@ -167,13 +166,12 @@ async def pdf_to_images(
         for page_num in range(len(doc)):
             page = doc[page_num]
 
+            pix = page.get_pixmap(matrix=matrix, alpha=False)
             if format == "png":
-                pix = page.get_pixmap(matrix=matrix, alpha=False)
                 img_bytes = pix.tobytes("png")
                 mime = "image/png"
             else:
-                pix = page.get_pixmap(matrix=matrix)
-                img_bytes = pix.tobytes("jpeg", quality=80)
+                img_bytes = pix.tobytes("jpeg")
                 mime = "image/jpeg"
 
             b64 = base64.b64encode(img_bytes).decode('utf-8')
